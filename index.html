@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Expense Tracker</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <!-- ── Header ─────────────────────────────────────────────────────────────── -->
+  <header class="header">
+    <div class="header-brand">
+      <div class="brand-dot">💰</div>
+      Expense Tracker
+    </div>
+    <div class="total-label">Total Spent</div>
+    <div class="total-amount" id="totalAmount">$0.00</div>
+  </header>
+
+  <div class="container">
+
+    <!-- ── Budget card ──────────────────────────────────────────────────────── -->
+    <div class="card">
+      <div class="card-label">Monthly Budget</div>
+      <div class="budget-row">
+        <div class="input-wrap" style="flex:1">
+          <span class="prefix">$</span>
+          <input
+            type="number"
+            id="budgetInput"
+            class="has-prefix"
+            placeholder="Set your budget limit…"
+            min="0"
+            step="0.01"
+          >
+        </div>
+        <button class="btn btn-ghost" onclick="setBudget()">Set</button>
+      </div>
+
+      <!-- Progress bar + warning — hidden until a budget is set -->
+      <div id="budgetProgress" style="display:none">
+        <div class="budget-progress">
+          <div class="budget-progress-meta">
+            <span id="spentLabel">Spent: $0.00</span>
+            <span id="budgetLabel">Budget: $0.00</span>
+          </div>
+          <div class="budget-track">
+            <div class="budget-fill" id="budgetFill"></div>
+          </div>
+        </div>
+        <div class="budget-alert" id="budgetAlert" style="display:none">
+          ⚠️ <strong id="alertText"></strong>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Add Expense card ─────────────────────────────────────────────────── -->
+    <div class="card">
+      <div class="card-label">Add Expense</div>
+      <div class="form-grid">
+
+        <div class="field">
+          <label for="amount">Amount</label>
+          <div class="input-wrap">
+            <span class="prefix">$</span>
+            <input
+              type="number"
+              id="amount"
+              class="has-prefix"
+              placeholder="0.00"
+              min="0.01"
+              step="0.01"
+            >
+          </div>
+        </div>
+
+        <div class="field">
+          <label for="category">Category</label>
+          <select id="category">
+            <option value="food">🍔 Food</option>
+            <option value="transport">🚗 Transport</option>
+            <option value="shopping">🛍️ Shopping</option>
+            <option value="bills">⚡ Bills</option>
+            <option value="entertainment">🎬 Entertainment</option>
+            <option value="other">📦 Other</option>
+          </select>
+        </div>
+
+        <div class="field span-2">
+          <label for="date">Date</label>
+          <input type="date" id="date">
+        </div>
+
+        <div class="field span-2">
+          <label for="notes">
+            Notes <span style="opacity:.45; font-weight:400">(optional)</span>
+          </label>
+          <textarea id="notes" placeholder="What was this expense for?"></textarea>
+        </div>
+
+      </div>
+
+      <button class="btn btn-primary" onclick="addExpense()">
+        <svg width="15" height="15" viewBox="0 0 15 15" fill="none">
+          <path d="M7.5 1v13M1 7.5h13" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+        </svg>
+        Add Expense
+      </button>
+    </div>
+
+    <!-- ── Transactions list ────────────────────────────────────────────────── -->
+    <div class="section-header">
+      <span class="section-title">Transactions</span>
+      <span class="badge" id="txCount">0 expenses</span>
+    </div>
+
+    <div id="txList"></div>
+
+  </div><!-- /container -->
+
+  <script src="script.js"></script>
+</body>
+</html>
