@@ -125,6 +125,11 @@ body {
   margin-bottom: 14px;
 }
 
+/* ── Chart card ──────────────────────────────────────────────────────────── */
+#spendingChart {
+  max-height: 260px;
+}
+
 /* ── Budget card ────────────────────────────────────────────────────────── */
 .budget-row {
   display: flex;

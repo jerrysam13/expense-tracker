@@ -17,6 +17,7 @@ const CATS = {
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 let expenses = JSON.parse(localStorage.getItem('et_expenses') || '[]');
 let budget   = parseFloat(localStorage.getItem('et_budget')   || '0');
+let chart    = null;
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // PERSISTENCE — call save() any time state changes
@@ -104,6 +105,8 @@ function render() {
 
   countEl.textContent = n + (n === 1 ? ' expense' : ' expenses');
 
+  updateChart();
+
   if (n === 0) {
     listEl.innerHTML = `
       <div class="empty">
@@ -136,6 +139,79 @@ function render() {
         </div>
       </div>`;
   }).join('');
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// CHART — doughnut showing spending totals per category
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+function updateChart() {
+  // Aggregate totals per category
+  const totals = {};
+  for (const e of expenses) {
+    totals[e.category] = (totals[e.category] || 0) + e.amount;
+  }
+
+  const keys   = Object.keys(totals);
+  const labels = keys.map(k => `${CATS[k].icon} ${CATS[k].label}`);
+  const data   = keys.map(k => totals[k]);
+  const colors = keys.map(k => CATS[k].color);
+
+  const cardEl = document.getElementById('chartCard');
+
+  if (keys.length === 0) {
+    cardEl.style.display = 'none';
+    return;
+  }
+  cardEl.style.display = 'block';
+
+  if (!chart) {
+    // First time: create the Chart.js instance
+    chart = new Chart(document.getElementById('spendingChart'), {
+      type: 'doughnut',
+      data: {
+        labels,
+        datasets: [{
+          data,
+          backgroundColor: colors,
+          borderColor: '#161b22',   // --surface: gap between slices matches card bg
+          borderWidth: 3,
+          hoverOffset: 8,
+        }]
+      },
+      options: {
+        responsive: true,
+        cutout: '68%',
+        plugins: {
+          legend: {
+            position: 'bottom',
+            labels: {
+              color: '#8b949e',    // --muted
+              padding: 16,
+              font: { size: 13, family: 'inherit' },
+              usePointStyle: true,
+              pointStyleWidth: 10,
+            }
+          },
+          tooltip: {
+            callbacks: {
+              label: ctx => ` ${ctx.label}  ${fmt(ctx.parsed)}`
+            },
+            backgroundColor: '#21262d',  // --surface-2
+            titleColor: '#e6edf3',        // --text
+            bodyColor: '#e6edf3',
+            borderColor: 'rgba(255,255,255,0.08)',
+            borderWidth: 1,
+          }
+        }
+      }
+    });
+  } else {
+    // Subsequent updates: mutate data and call update() for smooth animation
+    chart.data.labels                      = labels;
+    chart.data.datasets[0].data            = data;
+    chart.data.datasets[0].backgroundColor = colors;
+    chart.update();
+  }
 }
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
