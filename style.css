@@ -241,8 +241,10 @@ input[type="date"] {
   padding: 0 14px;
 }
 
-/* Extra left padding to make room for the $ prefix */
-.has-prefix { padding-left: 32px; }
+/* Extra left padding to make room for the $ prefix.
+   Must be input.has-prefix (not just .has-prefix) to outrank the
+   higher-specificity input[type="number"] rule above. */
+input.has-prefix { padding-left: 32px; }
 
 select {
   height: 46px;
