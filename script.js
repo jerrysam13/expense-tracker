@@ -508,6 +508,189 @@ function markError(el) {
 }
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// EXPORT
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+function toggleExportMenu() {
+  const menu = document.getElementById('exportMenu');
+  const isOpen = menu.classList.toggle('open');
+
+  if (isOpen) {
+    // Close on next outside click
+    setTimeout(() => {
+      document.addEventListener('click', function handler(e) {
+        if (!document.getElementById('exportWrap').contains(e.target)) {
+          menu.classList.remove('open');
+          document.removeEventListener('click', handler);
+        }
+      });
+    }, 0);
+  }
+}
+
+// ── Excel (.xlsx) via SheetJS ────────────────────────────────────────────
+// Uses getFiltered() so the export respects whatever search/filter is active.
+// SheetJS wraps the Blob + object-URL download internally via XLSX.writeFile().
+function exportExcel() {
+  document.getElementById('exportMenu').classList.remove('open');
+
+  const rows = getFiltered().map(e => ({
+    Date:     e.date,
+    Category: CATS[e.category]?.label || e.category,
+    Notes:    e.notes || '',
+    Amount:   e.amount,
+  }));
+
+  const ws = XLSX.utils.json_to_sheet(rows);
+
+  // Set column widths
+  ws['!cols'] = [{ wch: 12 }, { wch: 15 }, { wch: 35 }, { wch: 12 }];
+
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Expenses');
+
+  const date = new Date().toISOString().slice(0, 10);
+  XLSX.writeFile(wb, `expenses-${date}.xlsx`);
+}
+
+// ── PDF via jsPDF + AutoTable ────────────────────────────────────────────
+// Layout: purple header bar → summary box → expense table → category table.
+// jsPDF units are points (pt). Letter page = 612 × 792 pt.
+function exportPDF() {
+  document.getElementById('exportMenu').classList.remove('open');
+
+  const { jsPDF } = window.jspdf;
+  const doc   = new jsPDF({ unit: 'pt', format: 'letter' });
+  const W     = doc.internal.pageSize.getWidth();
+  const data  = getFiltered();
+  const total = data.reduce((s, e) => s + e.amount, 0);
+
+  const exportDate = new Date().toLocaleDateString('en-US',
+    { year: 'numeric', month: 'long', day: 'numeric' });
+
+  // ── Header bar ──────────────────────────────────────────────────────────
+  doc.setFillColor(124, 58, 237);
+  doc.rect(0, 0, W, 56, 'F');
+
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(20);
+  doc.setTextColor(255, 255, 255);
+  doc.text('Expense Tracker', 40, 36);
+
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(10);
+  doc.setTextColor(220, 210, 255);
+  doc.text(`Exported ${exportDate}`, W - 40, 36, { align: 'right' });
+
+  // ── Summary box ─────────────────────────────────────────────────────────
+  let y = 80;
+  doc.setFillColor(245, 243, 255);
+  doc.roundedRect(40, y, W - 80, 62, 6, 6, 'F');
+
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(10);
+  doc.setTextColor(100, 80, 160);
+  doc.text('SUMMARY', 56, y + 18);
+
+  doc.setFontSize(11);
+  doc.setTextColor(30, 20, 50);
+
+  doc.setFont('helvetica', 'normal');
+  doc.text('Total Spent:', 56, y + 36);
+  doc.setFont('helvetica', 'bold');
+  doc.text(fmt(total), 160, y + 36);
+
+  doc.setFont('helvetica', 'normal');
+  doc.text('Expenses Shown:', 56, y + 52);
+  doc.setFont('helvetica', 'bold');
+  doc.text(String(data.length), 160, y + 52);
+
+  if (budget > 0) {
+    const col2 = W / 2 + 20;
+    const pct  = ((total / budget) * 100).toFixed(1);
+    doc.setFont('helvetica', 'normal');
+    doc.text('Budget:', col2, y + 36);
+    doc.setFont('helvetica', 'bold');
+    doc.text(`${fmt(budget)}  (${pct}% used)`, col2 + 60, y + 36);
+  }
+
+  // ── Expense table ────────────────────────────────────────────────────────
+  y += 82;
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(11);
+  doc.setTextColor(30, 20, 50);
+  doc.text('Expenses', 40, y);
+
+  doc.autoTable({
+    startY: y + 10,
+    margin: { left: 40, right: 40 },
+    head: [['Date', 'Category', 'Notes', 'Amount']],
+    body: data.map(e => [
+      e.date,
+      CATS[e.category]?.label || e.category,
+      e.notes || '—',
+      fmt(e.amount),
+    ]),
+    headStyles: {
+      fillColor: [124, 58, 237],
+      textColor: 255,
+      fontStyle: 'bold',
+      fontSize: 10,
+    },
+    bodyStyles: { fontSize: 10, textColor: [30, 20, 50] },
+    alternateRowStyles: { fillColor: [248, 246, 255] },
+    columnStyles: {
+      0: { cellWidth: 72 },
+      1: { cellWidth: 90 },
+      3: { cellWidth: 72, halign: 'right' },
+    },
+  });
+
+  // ── Category breakdown ───────────────────────────────────────────────────
+  const catTotals = {};
+  for (const e of data) {
+    catTotals[e.category] = (catTotals[e.category] || 0) + e.amount;
+  }
+  const catRows = Object.entries(catTotals)
+    .sort((a, b) => b[1] - a[1])
+    .map(([cat, amt]) => [
+      CATS[cat]?.label || cat,
+      fmt(amt),
+      total > 0 ? ((amt / total) * 100).toFixed(1) + '%' : '0%',
+    ]);
+
+  if (catRows.length > 0) {
+    const afterTable = doc.lastAutoTable.finalY + 24;
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(11);
+    doc.setTextColor(30, 20, 50);
+    doc.text('Category Breakdown', 40, afterTable);
+
+    doc.autoTable({
+      startY: afterTable + 10,
+      margin: { left: 40, right: 40 },
+      head: [['Category', 'Total', 'Share']],
+      body: catRows,
+      headStyles: {
+        fillColor: [124, 58, 237],
+        textColor: 255,
+        fontStyle: 'bold',
+        fontSize: 10,
+      },
+      bodyStyles: { fontSize: 10, textColor: [30, 20, 50] },
+      alternateRowStyles: { fillColor: [248, 246, 255] },
+      columnStyles: {
+        1: { halign: 'right' },
+        2: { halign: 'right' },
+      },
+    });
+  }
+
+  const date = new Date().toISOString().slice(0, 10);
+  doc.save(`expenses-${date}.pdf`);
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // INIT
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
