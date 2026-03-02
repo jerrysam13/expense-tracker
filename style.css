@@ -16,6 +16,42 @@
   --red:       #ef4444;
   --r:         12px;      /* card border-radius        */
   --r-sm:      8px;       /* input border-radius       */
+
+  /* Theme-switching tokens (replace hardcoded values in rules below) */
+  --header-bg-start: #1e0a3c;
+  --header-bg-end:   #0d1117;
+  --header-glow-1:   rgba(124, 58, 237, 0.22);
+  --header-glow-2:   rgba(139, 92, 246, 0.12);
+  --brand-color:     rgba(255, 255, 255, 0.65);
+  --brand-shadow:    rgba(124, 58, 237, 0.55);
+  --total-from:      #ffffff;
+  --total-to:        #c4b5fd;
+  --total-over-from: #fca5a5;
+  --total-over-to:   #ef4444;
+  --shadow-card:     rgba(0, 0, 0, 0.35);
+}
+
+/* ── Light theme overrides ───────────────────────────────────────────────── */
+[data-theme="light"] {
+  --bg:        #f6f8fa;
+  --surface:   #ffffff;
+  --surface-2: #f0f2f5;
+  --surface-3: #e1e4e8;
+  --border:    rgba(0, 0, 0, 0.1);
+  --text:      #24292f;
+  --muted:     #6e7781;
+
+  --header-bg-start: #ede9fe;
+  --header-bg-end:   #f6f8fa;
+  --header-glow-1:   rgba(124, 58, 237, 0.08);
+  --header-glow-2:   rgba(139, 92, 246, 0.05);
+  --brand-color:     rgba(0, 0, 0, 0.55);
+  --brand-shadow:    rgba(124, 58, 237, 0.3);
+  --total-from:      #4c1d95;
+  --total-to:        #7c3aed;
+  --total-over-from: #dc2626;
+  --total-over-to:   #ef4444;
+  --shadow-card:     rgba(0, 0, 0, 0.1);
 }
 
 body {
@@ -28,7 +64,7 @@ body {
 
 /* ── Header ─────────────────────────────────────────────────────────────── */
 .header {
-  background: linear-gradient(160deg, #1e0a3c 0%, #0d1117 60%);
+  background: linear-gradient(160deg, var(--header-bg-start) 0%, var(--header-bg-end) 60%);
   padding: 32px 20px 44px;
   text-align: center;
   position: relative;
@@ -41,8 +77,8 @@ body {
   position: absolute;
   inset: 0;
   background:
-    radial-gradient(ellipse at 20% 60%, rgba(124, 58, 237, 0.22) 0%, transparent 55%),
-    radial-gradient(ellipse at 80% 15%, rgba(139, 92, 246, 0.12) 0%, transparent 50%);
+    radial-gradient(ellipse at 20% 60%, var(--header-glow-1) 0%, transparent 55%),
+    radial-gradient(ellipse at 80% 15%, var(--header-glow-2) 0%, transparent 50%);
   pointer-events: none;
 }
 
@@ -53,7 +89,7 @@ body {
   gap: 10px;
   font-size: 15px;
   font-weight: 700;
-  color: rgba(255, 255, 255, 0.65);
+  color: var(--brand-color);
   letter-spacing: 0.3px;
   margin-bottom: 28px;
 }
@@ -67,7 +103,7 @@ body {
   align-items: center;
   justify-content: center;
   font-size: 17px;
-  box-shadow: 0 4px 18px rgba(124, 58, 237, 0.55);
+  box-shadow: 0 4px 18px var(--brand-shadow);
 }
 
 .total-label {
@@ -87,7 +123,7 @@ body {
   font-weight: 800;
   letter-spacing: -3px;
   line-height: 1;
-  background: linear-gradient(135deg, #ffffff 20%, #c4b5fd 100%);
+  background: linear-gradient(135deg, var(--total-from) 20%, var(--total-to) 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -95,7 +131,7 @@ body {
 }
 
 .total-amount.over {
-  background: linear-gradient(135deg, #fca5a5 0%, #ef4444 100%);
+  background: linear-gradient(135deg, var(--total-over-from) 0%, var(--total-over-to) 100%);
   -webkit-background-clip: text;
   background-clip: text;
 }
@@ -261,7 +297,7 @@ select {
   background-position: right 14px center;
 }
 
-select option { background: #21262d; }
+select option { background: var(--surface-2); }
 
 textarea {
   padding: 12px 14px;
@@ -356,7 +392,7 @@ textarea {
 
 .tx-item:hover {
   transform: translateY(-1px);
-  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.35);
+  box-shadow: 0 6px 24px var(--shadow-card);
 }
 
 /* Category emoji container */
@@ -455,6 +491,53 @@ textarea {
   color: var(--muted);
   max-width: 220px;
   margin: 0 auto;
+}
+
+/* ── Theme toggle button ─────────────────────────────────────────────────── */
+.theme-toggle {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  width: 38px;
+  height: 38px;
+  border: 1.5px solid rgba(255, 255, 255, 0.2);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.75);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s, border-color 0.2s, color 0.2s;
+}
+
+.theme-toggle:hover {
+  background: rgba(255, 255, 255, 0.16);
+}
+
+[data-theme="light"] .theme-toggle {
+  border-color: rgba(0, 0, 0, 0.15);
+  background: rgba(0, 0, 0, 0.05);
+  color: rgba(0, 0, 0, 0.6);
+}
+
+[data-theme="light"] .theme-toggle:hover {
+  background: rgba(0, 0, 0, 0.1);
+}
+
+/* ── Theme transition — smooth colour swap on all major surfaces ──────────── */
+body,
+.card,
+.header,
+input, select, textarea,
+.badge,
+.section-title,
+.tx-item,
+.tx-note,
+.tx-date,
+.empty-title,
+.empty-sub {
+  transition: background-color 0.3s, color 0.3s, border-color 0.3s;
 }
 
 /* ── Animations ─────────────────────────────────────────────────────────── */
