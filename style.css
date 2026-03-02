@@ -401,6 +401,141 @@ textarea {
 /* Prevent filter selects from stretching to 100% width (base rule override) */
 .filter-bar select { width: auto; }
 
+/* ── Monthly Summary card ────────────────────────────────────────────────── */
+.summary-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+  user-select: none;
+}
+
+.summary-header .card-label { margin-bottom: 0; }
+
+.summary-chevron {
+  color: var(--muted);
+  transition: transform 0.35s ease;
+  flex-shrink: 0;
+}
+
+.summary-chevron.open { transform: rotate(180deg); }
+
+/* Card body collapse/expand — grid trick for smooth height animation */
+.summary-body {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 0.35s ease;
+}
+
+.summary-body.open { grid-template-rows: 1fr; }
+
+.summary-inner { overflow: hidden; }
+
+/* ── Month rows ──────────────────────────────────────────────────────────── */
+.month-row + .month-row { border-top: 1px solid var(--border); }
+
+.month-toggle {
+  cursor: pointer;
+  padding: 12px 0;
+  user-select: none;
+}
+
+.month-row:first-child .month-toggle { padding-top: 14px; }
+
+.month-row-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.month-name-wrap {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.month-name {
+  font-size: 14px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.current-tag {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  color: var(--accent-h);
+  background: rgba(139, 92, 246, 0.15);
+  padding: 2px 7px;
+  border-radius: 99px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.month-count {
+  font-size: 12px;
+  color: var(--muted);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.month-total {
+  font-size: 15px;
+  font-weight: 700;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.month-chevron {
+  color: var(--muted);
+  transition: transform 0.3s ease;
+  flex-shrink: 0;
+}
+
+.month-chevron.open { transform: rotate(180deg); }
+
+/* Mini progress bar — width represents this month vs the highest-spend month */
+.month-track {
+  height: 4px;
+  background: var(--surface-3);
+  border-radius: 99px;
+  margin-top: 8px;
+  overflow: hidden;
+}
+
+.month-fill {
+  height: 100%;
+  background: var(--accent);
+  border-radius: 99px;
+  transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Current month gets the accent gradient instead of flat accent */
+.month-row.current .month-fill {
+  background: linear-gradient(90deg, var(--accent), var(--accent-h));
+}
+
+/* Per-month expense panel — same grid trick as summary-body */
+.month-expenses {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 0.3s ease;
+}
+
+.month-expenses.open { grid-template-rows: 1fr; }
+
+.month-expenses-inner {
+  overflow: hidden;
+  padding-top: 10px;
+}
+
+/* Suppress slideDown animation on summary items (panel reveals them via grid) */
+.month-expenses-inner .tx-item { animation: none; margin-bottom: 8px; }
+.month-expenses-inner .tx-item:last-child { margin-bottom: 4px; }
+
 /* ── Individual transaction item ────────────────────────────────────────── */
 .tx-item {
   display: flex;
@@ -562,7 +697,11 @@ input, select, textarea,
 .tx-note,
 .tx-date,
 .empty-title,
-.empty-sub {
+.empty-sub,
+.month-name,
+.month-total,
+.month-count,
+.month-track {
   transition: background-color 0.3s, color 0.3s, border-color 0.3s;
 }
 

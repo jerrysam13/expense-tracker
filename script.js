@@ -23,6 +23,9 @@ let filterSearch   = '';
 let filterCategory = 'all';
 let filterDate     = 'all';
 
+let openMonths  = new Set();  // 'YYYY-MM' keys whose expense panels are open
+let summaryOpen = true;       // whether the monthly summary card body is visible
+
 const MOON_ICON = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg>`;
 const SUN_ICON  = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>`;
 
@@ -166,6 +169,7 @@ function render() {
   // ── Transaction list ──────────────────────────────────────────────────
   updateChart();
   renderList();
+  renderMonthlySummary();
 }
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -230,6 +234,126 @@ function renderList() {
         </div>
       </div>`;
   }).join('');
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// MONTHLY SUMMARY — groups all expenses by calendar month and renders a
+// collapsible card with one row per month.
+//
+// Grouping logic: each expense date is "YYYY-MM-DD"; slicing the first 7
+// characters gives "YYYY-MM". These keys are zero-padded so lexicographic
+// sort (the default Array.sort) gives correct chronological order — no Date
+// parsing required. We reverse the sorted array to show newest month first.
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+function renderMonthlySummary() {
+  const cardEl = document.getElementById('summaryCard');
+  if (expenses.length === 0) { cardEl.style.display = 'none'; return; }
+  cardEl.style.display = 'block';
+
+  // ── Group by YYYY-MM ───────────────────────────────────────────────────
+  const groups = {};
+  for (const e of expenses) {
+    const key = e.date.slice(0, 7);
+    if (!groups[key]) groups[key] = [];
+    groups[key].push(e);
+  }
+
+  // Newest month first; lexicographic sort on YYYY-MM is chronologically correct
+  const keys     = Object.keys(groups).sort().reverse();
+  const totals   = keys.map(k => groups[k].reduce((s, e) => s + e.amount, 0));
+  const maxTotal = Math.max(...totals);
+
+  const now        = new Date();
+  const currentKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+
+  const monthsHTML = keys.map((key, i) => {
+    const items     = groups[key];
+    const total     = totals[i];
+    const pct       = maxTotal > 0 ? Math.round((total / maxTotal) * 100) : 0;
+    const isCurrent = key === currentKey;
+    const isOpen    = openMonths.has(key);
+    const [y, m]    = key.split('-');
+    const monthName = new Date(+y, +m - 1, 1)
+      .toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+
+    // Individual expense rows — no IDs, no delete buttons (read-only view)
+    const expensesHTML = items.map(e => {
+      const cat = CATS[e.category] || CATS.other;
+      return `
+        <div class="tx-item" style="border-left-color:${cat.color}">
+          <div class="tx-icon" style="background:${cat.color}1a">${cat.icon}</div>
+          <div class="tx-body">
+            <div class="tx-cat" style="color:${cat.color}">${cat.label}</div>
+            <div class="tx-note">${e.notes || '—'}</div>
+            <div class="tx-date">${fmtDate(e.date)}</div>
+          </div>
+          <div class="tx-right">
+            <div class="tx-amount">${fmt(e.amount)}</div>
+          </div>
+        </div>`;
+    }).join('');
+
+    return `
+      <div class="month-row${isCurrent ? ' current' : ''}">
+        <div class="month-toggle" onclick="toggleMonth('${key}')">
+          <div class="month-row-header">
+            <div class="month-name-wrap">
+              <span class="month-name">${monthName}</span>
+              ${isCurrent ? '<span class="current-tag">Current</span>' : ''}
+            </div>
+            <span class="month-count">${items.length} expense${items.length !== 1 ? 's' : ''}</span>
+            <span class="month-total">${fmt(total)}</span>
+            <svg class="month-chevron${isOpen ? ' open' : ''}" width="14" height="14"
+                 viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                 stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <path d="m6 9 6 6 6-6"/>
+            </svg>
+          </div>
+          <div class="month-track">
+            <div class="month-fill" style="width:${pct}%"></div>
+          </div>
+        </div>
+        <div class="month-expenses${isOpen ? ' open' : ''}" id="month-exp-${key}">
+          <div class="month-expenses-inner">${expensesHTML}</div>
+        </div>
+      </div>`;
+  }).join('');
+
+  cardEl.innerHTML = `
+    <div class="summary-header" onclick="toggleSummaryCard()">
+      <span class="card-label">Monthly Summary</span>
+      <svg class="summary-chevron${summaryOpen ? ' open' : ''}" width="16" height="16"
+           viewBox="0 0 24 24" fill="none" stroke="currentColor"
+           stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="m6 9 6 6 6-6"/>
+      </svg>
+    </div>
+    <div class="summary-body${summaryOpen ? ' open' : ''}" id="summaryBody">
+      <div class="summary-inner">${monthsHTML}</div>
+    </div>`;
+}
+
+function toggleSummaryCard() {
+  summaryOpen = !summaryOpen;
+  document.getElementById('summaryBody')
+    ?.classList.toggle('open', summaryOpen);
+  document.querySelector('#summaryCard .summary-chevron')
+    ?.classList.toggle('open', summaryOpen);
+}
+
+function toggleMonth(key) {
+  if (openMonths.has(key)) {
+    openMonths.delete(key);
+  } else {
+    openMonths.add(key);
+  }
+  const isOpen = openMonths.has(key);
+  document.getElementById(`month-exp-${key}`)
+    ?.classList.toggle('open', isOpen);
+  document.querySelector(`#month-exp-${key}`)
+    ?.closest('.month-row')
+    ?.querySelector('.month-chevron')
+    ?.classList.toggle('open', isOpen);
 }
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
