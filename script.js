@@ -19,6 +19,10 @@ let expenses = JSON.parse(localStorage.getItem('et_expenses') || '[]');
 let budget   = parseFloat(localStorage.getItem('et_budget')   || '0');
 let chart    = null;
 
+let filterSearch   = '';
+let filterCategory = 'all';
+let filterDate     = 'all';
+
 const MOON_ICON = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg>`;
 const SUN_ICON  = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>`;
 
@@ -79,6 +83,42 @@ function uid() {
   return Date.now().toString(36) + Math.random().toString(36).slice(2);
 }
 
+// Returns the subset of expenses matching all active filters
+function getFiltered() {
+  const query = filterSearch.toLowerCase();
+
+  // Compute date-range bounds as YYYY-MM-DD strings for lexicographic comparison
+  const now = new Date();
+  let dateStart = '', dateEnd = '';
+
+  if (filterDate === 'week') {
+    // Monday of the current week
+    const d = new Date(now);
+    d.setDate(now.getDate() - ((now.getDay() + 6) % 7));
+    dateStart = d.toISOString().slice(0, 10);
+  } else if (filterDate === 'month') {
+    dateStart = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`;
+  } else if (filterDate === 'lastmonth') {
+    const y = now.getMonth() === 0 ? now.getFullYear() - 1 : now.getFullYear();
+    const m = now.getMonth() === 0 ? 12 : now.getMonth();
+    const lastDay = new Date(now.getFullYear(), now.getMonth(), 0).getDate();
+    dateStart = `${y}-${String(m).padStart(2, '0')}-01`;
+    dateEnd   = `${y}-${String(m).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
+  }
+
+  return expenses.filter(e => {
+    if (query) {
+      const inNotes    = (e.notes || '').toLowerCase().includes(query);
+      const inCategory = CATS[e.category].label.toLowerCase().includes(query);
+      if (!inNotes && !inCategory) return false;
+    }
+    if (filterCategory !== 'all' && e.category !== filterCategory) return false;
+    if (dateStart && e.date < dateStart) return false;
+    if (dateEnd   && e.date > dateEnd)   return false;
+    return true;
+  });
+}
+
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // RENDER — rebuilds the entire UI from the current state.
 // Called once on page load and after every state change.
@@ -124,15 +164,31 @@ function render() {
   }
 
   // ── Transaction list ──────────────────────────────────────────────────
-  const listEl  = document.getElementById('txList');
-  const countEl = document.getElementById('txCount');
-  const n       = expenses.length;
-
-  countEl.textContent = n + (n === 1 ? ' expense' : ' expenses');
-
   updateChart();
+  renderList();
+}
 
-  if (n === 0) {
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// RENDER LIST — redraws only the transaction list + badge count.
+// Called by render() and also directly by filter/search changes.
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+function renderList() {
+  const filtered = getFiltered();
+  const listEl   = document.getElementById('txList');
+  const countEl  = document.getElementById('txCount');
+  const total    = expenses.length;
+  const n        = filtered.length;
+
+  // Badge: "8 expenses" normally; "3 of 8 expenses" when a filter is active
+  const isFiltering = filterSearch || filterCategory !== 'all' || filterDate !== 'all';
+  if (isFiltering) {
+    countEl.textContent = n === 0 ? 'No results' : `${n} of ${total} expense${total !== 1 ? 's' : ''}`;
+  } else {
+    countEl.textContent = n + (n === 1 ? ' expense' : ' expenses');
+  }
+
+  // "No expenses yet" — shown only when there truly are no expenses stored
+  if (total === 0) {
     listEl.innerHTML = `
       <div class="empty">
         <div class="empty-emoji">💸</div>
@@ -142,10 +198,20 @@ function render() {
     return;
   }
 
-  // Build each transaction row from a template string
-  listEl.innerHTML = expenses.map(e => {
+  // "No results" — expenses exist but filters matched nothing
+  if (n === 0) {
+    listEl.innerHTML = `
+      <div class="empty">
+        <div class="empty-emoji">🔍</div>
+        <div class="empty-title">No results</div>
+        <div class="empty-sub">Try a different search term or adjust your filters</div>
+      </div>`;
+    return;
+  }
+
+  // Build each transaction row
+  listEl.innerHTML = filtered.map(e => {
     const cat = CATS[e.category] || CATS.other;
-    // "1a" appended to hex color = ~10% opacity tint for icon background
     return `
       <div class="tx-item" id="tx-${e.id}" style="border-left-color:${cat.color}">
         <div class="tx-icon" style="background:${cat.color}1a">${cat.icon}</div>
@@ -337,6 +403,20 @@ document.getElementById('budgetInput').addEventListener('keydown', e => {
 
 // Apply saved theme (defaults to dark)
 applyTheme(localStorage.getItem('et_theme') || 'dark');
+
+// Wire up search and filter controls
+document.getElementById('searchInput').addEventListener('input', e => {
+  filterSearch = e.target.value.trim();
+  renderList();
+});
+document.getElementById('filterCat').addEventListener('change', e => {
+  filterCategory = e.target.value;
+  renderList();
+});
+document.getElementById('filterDate').addEventListener('change', e => {
+  filterDate = e.target.value;
+  renderList();
+});
 
 // Draw the initial UI
 render();

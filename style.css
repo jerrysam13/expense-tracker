@@ -375,6 +375,32 @@ textarea {
   border-radius: 99px;
 }
 
+/* ── Search & filter bar ─────────────────────────────────────────────────── */
+.filter-bar {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.search-wrap {
+  position: relative;
+  flex: 1;
+}
+
+.search-icon {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--muted);
+  pointer-events: none;
+}
+
+#searchInput { padding-left: 36px; }
+
+/* Prevent filter selects from stretching to 100% width (base rule override) */
+.filter-bar select { width: auto; }
+
 /* ── Individual transaction item ────────────────────────────────────────── */
 .tx-item {
   display: flex;
@@ -554,4 +580,9 @@ input, select, textarea,
   /* Stack the 2-column form into 1 column */
   .form-grid { grid-template-columns: 1fr; }
   .field.span-2 { grid-column: 1; }
+
+  /* Search takes full width on mobile; selects split the row below it */
+  .filter-bar { flex-wrap: wrap; }
+  .search-wrap { flex: 0 0 100%; }
+  .filter-bar select { flex: 1; }
 }

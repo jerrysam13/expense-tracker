@@ -123,6 +123,36 @@
       <span class="badge" id="txCount">0 expenses</span>
     </div>
 
+    <!-- ── Search & filter controls ──────────────────────────────────────────── -->
+    <div class="filter-bar">
+
+      <div class="search-wrap">
+        <svg class="search-icon" width="14" height="14" viewBox="0 0 24 24" fill="none"
+             stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+        </svg>
+        <input type="text" id="searchInput" placeholder="Search expenses…">
+      </div>
+
+      <select id="filterCat">
+        <option value="all">All Categories</option>
+        <option value="food">🍔 Food</option>
+        <option value="transport">🚗 Transport</option>
+        <option value="shopping">🛍️ Shopping</option>
+        <option value="bills">⚡ Bills</option>
+        <option value="entertainment">🎬 Entertainment</option>
+        <option value="other">📦 Other</option>
+      </select>
+
+      <select id="filterDate">
+        <option value="all">All Time</option>
+        <option value="week">This Week</option>
+        <option value="month">This Month</option>
+        <option value="lastmonth">Last Month</option>
+      </select>
+
+    </div>
+
     <div id="txList"></div>
 
   </div><!-- /container -->
