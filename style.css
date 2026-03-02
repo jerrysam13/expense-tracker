@@ -242,7 +242,7 @@ input[type="date"] {
 }
 
 /* Extra left padding to make room for the $ prefix */
-.has-prefix { padding-left: 28px; }
+.has-prefix { padding-left: 32px; }
 
 select {
   height: 46px;
